@@ -64,11 +64,11 @@ void Server::AddConnection(std::unique_ptr<Socket> client)
     clients.push_back(std::move(cl));
     std::string str = "Succesfully Connected To server " + std::to_string(clients.back().id);
     auto socptr = clients.back().Csocket.get();
-    std::thread([socptr,str](){
+    std::thread([socptr, str]() {
         auto str_ = std::move(str);
         socptr->Write(str_);
-    }).detach();
-    clientV_mut.unlock();
+        }).detach();
+        clientV_mut.unlock();
 }
 
 void Server::AcceptConnections()
