@@ -93,7 +93,6 @@ Server::~Server()
     ic_thread.join();
 }
 
-
 int main()
 {
     try

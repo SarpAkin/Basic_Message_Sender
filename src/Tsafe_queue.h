@@ -33,6 +33,11 @@ public:
         deq.push_back(std::move(temp));
         mut.unlock();
     }
+
+    inline size_t size()
+    {
+        return deq.size();
+    }
 };
 
 
