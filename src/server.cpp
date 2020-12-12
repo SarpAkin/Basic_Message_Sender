@@ -5,13 +5,22 @@
 #include <atomic>
 #include <mutex>
 
-#include "Socket.h"
+#include "connection.h"
 namespace asio = boost::asio;
 
 struct Client
 {
     uint32_t id;
-    std::unique_ptr<Socket> Csocket;
+    std::unique_ptr<Connection> connection;
+};
+
+const auto lambda = [](std::vector<char> dVec)
+{
+    for (char c : dVec)
+    {
+        std::cout << c;
+    }
+    std::cout << std::endl;
 };
 
 class Server
@@ -29,7 +38,8 @@ public:
     Server(uint16_t portNum);
     ~Server();
 
-    void AddConnection(std::unique_ptr<Socket> client);
+    void Stop();
+    void AddConnection(std::unique_ptr<Connection> client);
     void AcceptConnections();
 };
 
@@ -54,21 +64,18 @@ Server::Server(uint16_t portNum)
     }
 }
 
-void Server::AddConnection(std::unique_ptr<Socket> client)
+void Server::AddConnection(std::unique_ptr<Connection> client)
 {
     Client cl;
-    cl.Csocket = std::move(client);
+    cl.connection = std::move(client);
     clientV_mut.lock();
     cl.id = clCounter;
     clCounter++;
     clients.push_back(std::move(cl));
     std::string str = "Succesfully Connected To server " + std::to_string(clients.back().id);
-    auto socptr = clients.back().Csocket.get();
-    std::thread([socptr, str]() {
-        auto str_ = std::move(str);
-        socptr->Write(str_);
-        }).detach();
-        clientV_mut.unlock();
+    std::vector<char> dVec(str.begin(), str.end());
+    clients.back().connection.get()->Send(std::move(dVec));
+    clientV_mut.unlock();
 }
 
 void Server::AcceptConnections()
@@ -78,7 +85,7 @@ void Server::AcceptConnections()
             if (!ec)
             {
                 std::cout << "Adding Connection to server!" << std::endl;
-                AddConnection(std::make_unique<Socket>(std::move(_socket)));
+                AddConnection(std::make_unique<Connection>(std::move(_socket),lambda));
             }
             else
             {
@@ -88,9 +95,25 @@ void Server::AcceptConnections()
             AcceptConnections();
         });
 }
+
+void Server::Stop()
+{
+    connection_acceptor.cancel();
+    connection_acceptor.close();
+    clientV_mut.lock();
+    for (auto& cl : clients)
+    {
+        cl.connection->Stop();
+    }
+    clientV_mut.unlock();
+    ic.stop();
+    ic_thread.join();
+    std::cout << "Server Stopped\n";
+}
+
 Server::~Server()
 {
-    ic_thread.join();
+    Stop();
 }
 
 int main()

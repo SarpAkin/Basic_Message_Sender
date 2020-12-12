@@ -1,10 +1,10 @@
-CFLAGS = -std=c++17 -pthread -lstdc++
-CC = clang
+CFLAGS = -std=c++17 -pthread -lstdc++ -g
+CC = gcc
 
 all:client server
 
-client:src/client.cpp src/Socket.cpp
-	$(CC) -o client src/client.cpp src/Socket.cpp $(CFLAGS)
+client:src/client.cpp src/connection.cpp
+	$(CC) -o client src/client.cpp  src/connection.cpp $(CFLAGS)
 
-server:src/server.cpp src/Socket.cpp
-	$(CC) -o server src/server.cpp src/Socket.cpp $(CFLAGS)
+server:src/server.cpp  src/connection.cpp
+	$(CC) -o server src/server.cpp  src/connection.cpp $(CFLAGS)

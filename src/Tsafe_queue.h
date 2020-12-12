@@ -13,7 +13,7 @@ private:
 public:
     T_queue() = default;
     
-    T&& pop_front()
+    T pop_front()
     {
         mut.lock();
         if(deq.size() == 0)
@@ -24,7 +24,7 @@ public:
         T temp = std::move(deq.front());
         deq.pop_front();
         mut.unlock();
-        return std::move(temp);
+        return temp;
     }
 
     void push_back(T&& temp)
