@@ -8,7 +8,7 @@ Connection::Connection(asio::ip::tcp::socket&& socket__, asio::io_context& ic)
 }
 
 Connection::Connection(asio::ip::tcp::socket&& socket__,
-    std::function<void(std::vector<char>& dVec)> onMR, asio::io_context& ic)
+    std::function<void(std::vector<char>&& dVec)> onMR, asio::io_context& ic)
     : socket_(std::move(socket__))
 {
     i_cont = &ic;
@@ -84,31 +84,24 @@ void Connection::listen()
             if (header.DataSize > 0)
             {
                 readBBuffer = std::vector<char>(header.DataSize, 0);
-                std::cout << readBBuffer.size() << std::endl;
                 asio::async_read(socket_, asio::buffer(readBBuffer, header.DataSize),
                     [this](boost::system::error_code ec, std::size_t length)
                     {
-                        std::cout << "reaading message!\n";
-                        for (char c : readBBuffer)
-                        {
-                            std::cout << c;
-                        }
-                        std::cout << std::endl;
                         if (ec)
                         {
                             Stop();
                             std::cout << "Stopping connection due to " << ec.message() << std::endl;
                             return;
                         }
-                        /*
+                        
                         if (useQueueOnMessageReceive)
                         {
                             inqueue.push_back(std::move(readBBuffer));
                         }
                         else
                         {
-                            OnMessageReceive(readBBuffer);
-                        }*/
+                            OnMessageReceive(std::move(readBBuffer));
+                        }
                         listen();
                     });
             }
@@ -127,6 +120,7 @@ void Connection::Stop()
     isOpen = false;
     socket_.cancel();
     socket_.close();
+    WorkerThread.join();
 }
 
 Connection::~Connection()

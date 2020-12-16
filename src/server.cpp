@@ -6,6 +6,7 @@
 #include <mutex>
 
 #include "connection.h"
+
 namespace asio = boost::asio;
 
 struct Client
@@ -39,8 +40,12 @@ public:
     ~Server();
 
     void Stop();
-    void AddConnection(std::unique_ptr<Connection> client);
+    void AddConnection(Client client);
     void AcceptConnections();
+
+    bool SendMessage(std::vector<char> mVec, int clientNum);
+    bool SendMessageAll(std::vector<char> mVec);
+
 };
 
 Server::Server(uint16_t portNum)
@@ -64,13 +69,9 @@ Server::Server(uint16_t portNum)
     }
 }
 
-void Server::AddConnection(std::unique_ptr<Connection> client)
+void Server::AddConnection(Client cl)
 {
-    Client cl;
-    cl.connection = std::move(client);
     clientV_mut.lock();
-    cl.id = clCounter;
-    clCounter++;
     clients.push_back(std::move(cl));
     std::string str = "Succesfully Connected To server " + std::to_string(clients.back().id);
     std::vector<char> dVec(str.begin(), str.end());
@@ -85,7 +86,23 @@ void Server::AcceptConnections()
             if (!ec)
             {
                 std::cout << "Adding Connection to server!" << std::endl;
-                AddConnection(std::make_unique<Connection>(std::move(_socket),lambda,ic));
+                Client client;
+                int cnum = clCounter;
+                clCounter++;
+                client.id = cnum;
+                client.connection = std::make_unique<Connection>(std::move(_socket),
+                    [this, cnum](std::vector<char>&& dVec)
+                    {
+
+                        std::string message("[");
+                        message += std::to_string(cnum);
+                        message += ']';
+                        message.append(dVec.begin(), dVec.end());
+                        std::cout << message << std::endl;
+                        SendMessageAll(std::vector<char>(message.begin(),message.end()));
+                    }
+                , ic);
+                AddConnection(std::move(client));
             }
             else
             {
@@ -116,6 +133,45 @@ Server::~Server()
     Stop();
 }
 
+bool Server::SendMessage(std::vector<char> mVec, int clientId)
+{
+    clientV_mut.lock();
+
+    for (auto& cl : clients)
+    {
+        if (cl.id == clientId)
+        {
+            if (cl.connection->isopen())
+            {
+                cl.connection->Send(std::move(mVec));
+                clientV_mut.unlock();//Unlock it on return
+                return true;
+            }
+        }
+    }
+
+    clientV_mut.unlock();
+    return false;
+}
+
+bool Server::SendMessageAll(std::vector<char> mVec)
+{
+    clientV_mut.lock();
+
+    std::cout << clients.size() << '\n';
+    for (auto& cl : clients)
+    {
+        if (cl.connection->isopen())
+        {
+            auto mCopy = mVec;
+            cl.connection->Send(std::move(mCopy));
+        }
+    }
+
+    clientV_mut.unlock();
+    return true;
+}
+
 int main()
 {
     try
@@ -127,7 +183,5 @@ int main()
     {
         std::cerr << e.what() << '\n';
     }
-    std::cout << "Server Stopped\n";
-    std::cin.get();
     //Server server(30020);
 }
