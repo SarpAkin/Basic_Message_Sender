@@ -22,10 +22,13 @@ struct MHeader
 class Connection
 {
 private:
-    std::thread WorkerThread;
+    std::thread WorkerThread = std::thread([](){/*do nothing*/});
+    asio::io_context* i_cont;
     asio::ip::tcp::socket socket_;
     std::function<void(std::vector<char>& dVec)> OnMessageReceive;
+
     bool useQueueOnMessageReceive = true;
+    bool isOpen = true;
 
     T_queue<std::vector<char>> inqueue;
     T_queue<std::vector<char>> outqueue;
@@ -41,8 +44,8 @@ private:
     void write();
 
 public:
-    Connection(asio::ip::tcp::socket&& socket__);
-    Connection(asio::ip::tcp::socket&& socket__, std::function<void(std::vector<char>& dVec)>);
+    Connection(asio::ip::tcp::socket&& socket__,asio::io_context& ic);
+    Connection(asio::ip::tcp::socket&& socket__, std::function<void(std::vector<char>& dVec)>,asio::io_context& ic);
     ~Connection();
 
     void Stop();

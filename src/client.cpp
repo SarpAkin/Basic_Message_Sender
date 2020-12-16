@@ -23,7 +23,7 @@ int main()
             std::cout << std::endl;
         };
         socket_.connect(endpoint);
-        Connection connection(std::move(socket_),lambda);
+        Connection connection(std::move(socket_),lambda,ic);
         while (1)
         {
             std::string str;

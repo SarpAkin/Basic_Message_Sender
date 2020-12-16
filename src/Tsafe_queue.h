@@ -34,6 +34,13 @@ public:
         mut.unlock();
     }
 
+    void flush()
+    {
+        mut.lock();
+        deq.clear();
+        mut.unlock();
+    }
+
     inline size_t size()
     {
         return deq.size();

@@ -85,7 +85,7 @@ void Server::AcceptConnections()
             if (!ec)
             {
                 std::cout << "Adding Connection to server!" << std::endl;
-                AddConnection(std::make_unique<Connection>(std::move(_socket),lambda));
+                AddConnection(std::make_unique<Connection>(std::move(_socket),lambda,ic));
             }
             else
             {
